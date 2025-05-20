@@ -1,1 +1,3 @@
-# My Project
+# GreenStream
+
+A carbon-aware CDN project to optimize latency and emissions...
