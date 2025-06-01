@@ -90,3 +90,14 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## 📝 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+
+
+
+
+
+conda activate greenstream
+uvicorn api.main:app --reload
+
+Running simulation code example:
+python scripts/simulate.py simulate --num-requests 300 --batch-size 50 --min-delay 1 --max-delay 2 --log-suffix after_bo
