@@ -36,7 +36,17 @@ class TrafficSimulator:
         """
         try:
             start_time = datetime.now(timezone.utc)
-            response = await self.http_client.get(f"{self.base_url}/video/{video_id}")
+            # Build query string
+            query_params = []
+            if self.log_suffix:
+                query_params.append(f"log_suffix={self.log_suffix}")
+            # Always use weighted policy for experiments
+            query_params.append("policy=weighted")
+            query_str = "&".join(query_params)
+            url = f"{self.base_url}/video/{video_id}"
+            if query_str:
+                url = f"{url}?{query_str}"
+            response = await self.http_client.get(url)
             end_time = datetime.now(timezone.utc)
             
             return {
