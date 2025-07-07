@@ -1,0 +1,21 @@
+{
+  "name": "greenstream-worker",
+  "main": "src/index.ts",
+  "compatibility_date": "2024-07-07",
+  "compatibility_flags": [
+    "global_fetch_strictly_public"
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "ECO_CONFIG",
+      "id": "bf337b35ad2447b48a1341e9570e57ab"
+    }
+  ],
+  "assets": {
+    // The path to the directory containing the `index.html` file to be served at `/`
+    "directory": "./public"
+  },
+  "observability": {
+    "enabled": true
+  }
+}
