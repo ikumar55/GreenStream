@@ -3,10 +3,12 @@ import json
 import os
 from typing import Dict, List, Optional
 from datetime import datetime, timezone
-from .carbon import get_carbon_client
-from .latency import latency_prober
+import httpx
 
 logger = logging.getLogger(__name__)
+
+CARBON_API_URL = "http://localhost:8001/carbon"
+LATENCY_API_URL = "http://localhost:8003/latency"
 
 class Router:
     def __init__(self):
@@ -23,7 +25,7 @@ class Router:
         self.beta = float(os.getenv("ROUTING_BETA", "0.5"))
         logger.info(f"Initialized Router with alpha={self.alpha}, beta={self.beta}")
 
-    def _log_routing_decision(self, decision: Dict, log_suffix: str = None):
+    def _log_routing_decision(self, decision: Dict, log_suffix: str = ""):
         date_str = datetime.now(timezone.utc).strftime('%Y%m%d')
         if log_suffix:
             log_file = os.path.join(self.log_dir, f"routing_{date_str}_{log_suffix}.jsonl")
@@ -38,26 +40,61 @@ class Router:
     def _compute_weighted_score(self, pop, carbon_intensities, latencies, norm_carbon, norm_latency):
         return self.alpha * norm_carbon[pop] + self.beta * norm_latency[pop]
 
+    async def fetch_carbon_intensity(self, pop: str) -> float:
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(CARBON_API_URL, params={"zone": pop}, timeout=3)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    return float(data.get("carbon_intensity", 500.0))
+        except Exception as e:
+            logger.warning(f"Failed to fetch carbon for {pop}: {e}")
+        return 500.0  # fallback
+
+    async def fetch_latency(self, pop: str) -> float:
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(LATENCY_API_URL, params={"pop": pop}, timeout=3)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    return float(data.get("latency_ms", 1000.0))
+        except Exception as e:
+            logger.warning(f"Failed to fetch latency for {pop}: {e}")
+        return 1000.0  # fallback
+
+    async def get_all_carbon_intensities(self) -> Dict[str, float]:
+        results = {}
+        for pop in self.cdn_pops.keys():
+            results[pop] = await self.fetch_carbon_intensity(pop)
+        return results
+
+    async def get_all_latencies(self) -> Dict[str, float]:
+        results = {}
+        for pop in self.cdn_pops.keys():
+            results[pop] = await self.fetch_latency(pop)
+        return results
+
     async def get_best_pop(self, policy="weighted"):
         """
         Get the best CDN POP.
         policy: "weighted" (use alpha/beta), "carbon" (lowest carbon), or "latency" (lowest latency)
         """
-        carbon_client = get_carbon_client()
-        carbon_intensities = await carbon_client.get_all_intensities()
-        latencies = await latency_prober.probe_all_pops()
-        acceptable_pops = await latency_prober.get_acceptable_pops()
+        carbon_intensities = await self.get_all_carbon_intensities()
+        latencies = await self.get_all_latencies()
+        acceptable_pops = [pop for pop in self.cdn_pops.keys() if latencies[pop] < 1000.0]
 
+        fallback_reason = None
         if not acceptable_pops:
             logger.warning("No POPs meet latency SLO, defaulting to eu-west")
-            return "eu-west", carbon_intensities, latencies, "fallback"
+            acceptable_pops = ["eu-west"]
+            fallback_reason = "no_acceptable_latency"
 
         if policy == "latency":
             best_pop = min(acceptable_pops, key=lambda pop: latencies[pop])
-            return best_pop, carbon_intensities, latencies, "latency"
+            policy_used = "latency"
         elif policy == "carbon":
             best_pop = min(acceptable_pops, key=lambda pop: carbon_intensities[pop])
-            return best_pop, carbon_intensities, latencies, "carbon"
+            policy_used = "carbon"
         else:
             cvals = [carbon_intensities[pop] for pop in acceptable_pops]
             lvals = [latencies[pop] for pop in acceptable_pops]
@@ -66,7 +103,9 @@ class Router:
             norm_carbon = {pop: (carbon_intensities[pop] - min_c) / (max_c - min_c) if max_c > min_c else 0.0 for pop in acceptable_pops}
             norm_latency = {pop: (latencies[pop] - min_l) / (max_l - min_l) if max_l > min_l else 0.0 for pop in acceptable_pops}
             best_pop = min(acceptable_pops, key=lambda pop: self._compute_weighted_score(pop, carbon_intensities, latencies, norm_carbon, norm_latency))
-            return best_pop, carbon_intensities, latencies, "weighted"
+            policy_used = "weighted"
+
+        return best_pop, carbon_intensities, latencies, policy_used, fallback_reason
 
     async def route_video(self, video_id: str, policy="weighted", log_suffix: str = None):
         """
@@ -74,7 +113,7 @@ class Router:
         policy: "weighted", "carbon", or "latency"
         log_suffix: optional string to append to log file name
         """
-        best_pop, carbon_intensities, latencies, policy_used = await self.get_best_pop(policy=policy)
+        best_pop, carbon_intensities, latencies, policy_used, fallback_reason = await self.get_best_pop(policy=policy)
         baseline_pop = min(latencies.items(), key=lambda x: x[1])[0]
         timestamp = datetime.now(timezone.utc)
         decision = {
@@ -86,11 +125,14 @@ class Router:
             "latencies": latencies,
             "metadata": {
                 "carbon_intensity": carbon_intensities[best_pop],
-                "latency": latencies[best_pop]
+                "latency": latencies[best_pop],
+                "alpha": self.alpha,
+                "beta": self.beta,
+                "fallback_reason": fallback_reason
             },
             "policy_used": policy_used
         }
-        self._log_routing_decision(decision, log_suffix=log_suffix)
+        self._log_routing_decision(decision, log_suffix=log_suffix or "")
         return decision
 
 # Initialize the router

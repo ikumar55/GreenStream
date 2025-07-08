@@ -1,0 +1,9 @@
+version: 2
+
+tunnels:
+  carbon:
+    addr: 8001
+    proto: http
+  latency:
+    addr: 8003
+    proto: http 

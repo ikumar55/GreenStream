@@ -79,7 +79,7 @@ class TrafficSimulator:
         Args:
             batch_size: Number of requests to send in each batch
             delay_range: Tuple of (min_delay, max_delay) in seconds between batches
-            
+        
         Returns:
             List[Dict]: List of request results
         """
@@ -94,9 +94,9 @@ class TrafficSimulator:
             
             # Generate video IDs for this batch
             video_ids = [f"video_{i:04d}" for i in range(start_idx, end_idx)]
-            
-            # Make requests concurrently
-            tasks = [self._make_request(video_id) for video_id in video_ids]
+        
+        # Make requests concurrently
+        tasks = [self._make_request(video_id) for video_id in video_ids]
             batch_results = await asyncio.gather(*tasks)
             results.extend(batch_results)
             

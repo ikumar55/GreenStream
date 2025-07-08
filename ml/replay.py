@@ -46,13 +46,13 @@ class LogReplayer:
         decisions = []
         for log_file in log_files:
             try:
-                with open(log_file) as f:
-                    for line in f:
-                        decisions.append(json.loads(line))
+            with open(log_file) as f:
+                for line in f:
+                    decisions.append(json.loads(line))
                 logger.info(f"Loaded {len(decisions)} decisions from {os.path.basename(log_file)}")
             except Exception as e:
                 logger.error(f"Error loading {log_file}: {str(e)}")
-                
+                    
         return decisions
         
     def calculate_carbon_savings(self, decisions: List[Dict]) -> float:

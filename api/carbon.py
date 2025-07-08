@@ -129,3 +129,16 @@ def get_carbon_client():
     if carbon_client is None:
         carbon_client = CarbonIntensityClient()
     return carbon_client 
+
+
+
+from fastapi import FastAPI, Query
+from fastapi.responses import JSONResponse
+
+app = FastAPI()
+
+@app.get("/carbon")
+async def get_carbon(zone: str = Query(..., description="Zone name, e.g. 'us-east'")):
+    client = get_carbon_client()
+    intensity = await client.get_zone_intensity(zone)
+    return JSONResponse(content={"zone": zone, "carbon_intensity": intensity})

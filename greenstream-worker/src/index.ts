@@ -25,17 +25,30 @@ interface Env {
 const POPS = ["us-east", "eu-west", "ap-southeast"];
 const LATENCY_SLO = 80; // ms
 
-// Mock data for demo (replace with real fetches later)
-const mockCarbon: Record<string, number> = {
-	"us-east": 243,
-	"eu-west": 300,
-	"ap-southeast": 450,
-};
-const mockLatency: Record<string, number> = {
-	"us-east": 83.7,
-	"eu-west": 98.8,
-	"ap-southeast": 63.9,
-};
+const CARBON_URL = "https://66be2bb56034.ngrok-free.app/carbon";
+const LATENCY_URL = "https://130938296ab1.ngrok-free.app/latency";
+
+async function fetchCarbon(zone: string): Promise<number> {
+	try {
+		const resp = await fetch(`${CARBON_URL}?zone=${zone}`);
+		if (resp.ok) {
+			const data = await resp.json() as any;
+			return data.carbon_intensity;
+		}
+	} catch (e) {}
+	return 500; // fallback
+}
+
+async function fetchLatency(pop: string): Promise<number> {
+	try {
+		const resp = await fetch(`${LATENCY_URL}?pop=${pop}`);
+		if (resp.ok) {
+			const data = await resp.json() as any;
+			return data.latency_ms;
+		}
+	} catch (e) {}
+	return 1000; // fallback
+}
 
 function selectPOP(
 	pops: string[],
@@ -77,16 +90,23 @@ export default {
 		const alpha = alphaStr ? parseFloat(alphaStr) : 0.9;
 		const beta = betaStr ? parseFloat(betaStr) : 0.1;
 
-		// Use mock data for now
-		const result = selectPOP(POPS, mockCarbon, mockLatency, alpha, beta, LATENCY_SLO);
+		// Fetch live carbon and latency data for all POPs
+		const [carbonVals, latencyVals] = await Promise.all([
+			Promise.all(POPS.map(fetchCarbon)),
+			Promise.all(POPS.map(fetchLatency)),
+		]);
+		const carbon: Record<string, number> = Object.fromEntries(POPS.map((p, i) => [p, carbonVals[i]]));
+		const latency: Record<string, number> = Object.fromEntries(POPS.map((p, i) => [p, latencyVals[i]]));
+
+		const result = selectPOP(POPS, carbon, latency, alpha, beta, LATENCY_SLO);
 
 		const response = {
 			selected_pop: result.pop,
 			reason: result.reason,
 			alpha,
 			beta,
-			carbon: mockCarbon,
-			latency: mockLatency,
+			carbon,
+			latency,
 			timestamp: new Date().toISOString(),
 		};
 		return new Response(JSON.stringify(response, null, 2), {

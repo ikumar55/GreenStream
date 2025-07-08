@@ -6330,3 +6330,16 @@
 2025-05-21 02:02:56,199 - api.routing - WARNING - No POPs meet latency SLO, defaulting to eu-west
 2025-05-21 02:02:56,217 - api.routing - WARNING - No POPs meet latency SLO, defaulting to eu-west
 2025-05-21 02:02:56,229 - api.routing - WARNING - No POPs meet latency SLO, defaulting to eu-west
+2025-07-08 05:23:19,482 - api.routing - WARNING - Failed to fetch carbon for us-east: All connection attempts failed
+2025-07-08 05:23:19,492 - api.routing - WARNING - Failed to fetch carbon for eu-west: All connection attempts failed
+2025-07-08 05:23:19,500 - api.routing - WARNING - Failed to fetch carbon for ap-southeast: All connection attempts failed
+2025-07-08 05:23:19,508 - api.routing - WARNING - Failed to fetch latency for us-east: All connection attempts failed
+2025-07-08 05:23:19,516 - api.routing - WARNING - Failed to fetch latency for eu-west: All connection attempts failed
+2025-07-08 05:23:19,524 - api.routing - WARNING - Failed to fetch latency for ap-southeast: All connection attempts failed
+2025-07-08 05:23:19,525 - api.routing - WARNING - No POPs meet latency SLO, defaulting to eu-west
+2025-07-08 06:02:10,393 - httpx - INFO - HTTP Request: GET http://localhost:8001/carbon?zone=us-east "HTTP/1.1 200 OK"
+2025-07-08 06:02:10,407 - httpx - INFO - HTTP Request: GET http://localhost:8001/carbon?zone=eu-west "HTTP/1.1 200 OK"
+2025-07-08 06:02:10,417 - httpx - INFO - HTTP Request: GET http://localhost:8001/carbon?zone=ap-southeast "HTTP/1.1 200 OK"
+2025-07-08 06:02:10,430 - httpx - INFO - HTTP Request: GET http://localhost:8003/latency?pop=us-east "HTTP/1.1 200 OK"
+2025-07-08 06:02:10,441 - httpx - INFO - HTTP Request: GET http://localhost:8003/latency?pop=eu-west "HTTP/1.1 404 Not Found"
+2025-07-08 06:02:10,454 - httpx - INFO - HTTP Request: GET http://localhost:8003/latency?pop=ap-southeast "HTTP/1.1 404 Not Found"

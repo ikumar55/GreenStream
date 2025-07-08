@@ -1,7 +1,7 @@
 from dotenv import load_dotenv
 load_dotenv()
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import StreamingResponse
 import httpx
 import logging
@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 
 from .routing import router
 from .carbon import get_carbon_client  # Import the getter function instead
-from .latency import latency_prober  # ✅ import directly
+
 
 # Ensure the logs directory exists
 os.makedirs('logs', exist_ok=True)
@@ -53,34 +53,6 @@ async def health_check():
         "status": "healthy",
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
-
-@app.get("/metrics")
-async def get_metrics():
-    try:
-        carbon_client = get_carbon_client()  # Get the client instance
-        carbon_intensities = await carbon_client.get_all_intensities()
-        latencies = await latency_prober.probe_all_pops()
-
-        # Sanitize: Replace any None or inf with a fallback value
-        def sanitize_dict(d: Dict[str, Optional[float]]) -> Dict[str, float]:
-            return {
-                k: float(v) if v is not None and v != float("inf") else -1.0
-                for k, v in d.items()
-            }
-
-        safe_carbon = sanitize_dict(carbon_intensities)
-        safe_latencies = sanitize_dict(latencies)
-
-        return {
-            "carbon_intensities": safe_carbon,
-            "latencies": safe_latencies,
-            "timestamp": datetime.now(timezone.utc).isoformat()
-        }
-    except Exception as e:
-        logger.error(f"Error fetching metrics: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to fetch metrics")
-
-from fastapi import Query
 
 @app.get("/video/{video_id}")
 async def route_video(
