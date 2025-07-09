@@ -89,3 +89,8 @@ uvicorn api.main:app --reload
 
 Running simulation code example:
 python scripts/simulate.py simulate --num-requests 300 --batch-size 50 --min-delay 1 --max-delay 2 --log-suffix after_bo
+
+## Live Data Availability (Free Tier)
+- Only `us-east` (US-NY-NYIS) returns live carbon intensity data with the free Electricity Maps API key.
+- All other zones (`eu-west`, `ap-southeast`, etc.) use static fallback values defined in the code.
+- All ML/BO/routing experiments will focus on `us-east` for real data.

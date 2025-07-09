@@ -97,6 +97,7 @@ def main():
     parser = argparse.ArgumentParser(description="Tune GreenStream routing weights")
     parser.add_argument("--log-dir", default="data/logs", help="Directory containing routing logs")
     parser.add_argument("--date", help="Date to analyze (YYYYMMDD format)")
+    parser.add_argument("--output", default="ml/optimized_weights.json", help="Where to write optimal weights")
     args = parser.parse_args()
     
     tuner = WeightTuner(args.log_dir)
@@ -110,6 +111,13 @@ def main():
     print(f"Optimal beta (carbon weight): {results['optimal_beta']:.3f}")
     print(f"Carbon savings: {results['carbon_savings_percent']:.2f}%")
     print(f"Average reward: {results['average_reward']:.4f}")
+
+    # Write optimal weights to file for router to use
+    if "optimal_alpha" in results and "optimal_beta" in results:
+        os.makedirs(os.path.dirname(args.output), exist_ok=True)
+        with open(args.output, "w") as f:
+            json.dump({"alpha": results["optimal_alpha"], "beta": results["optimal_beta"]}, f)
+        print(f"\nOptimal weights written to {args.output}")
 
 if __name__ == "__main__":
     main() 

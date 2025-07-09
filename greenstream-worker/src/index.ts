@@ -18,99 +18,88 @@
 // - Selects best POP using weighted score
 // - Responds with selected POP and metadata
 
-interface Env {
+import { getCarbon } from "./carbon";
+import { getLatency } from "./latency";
+
+export interface Env {
 	ECO_CONFIG: KVNamespace;
+	EM_API_KEY: string;
 }
 
 const POPS = ["us-east", "eu-west", "ap-southeast"];
-const LATENCY_SLO = 80; // ms
+const POP_TO_ZONE: Record<string, string> = {
+	"us-east": "US-NY-NYIS"
+	// Only us-east is supported for live carbon; others will fallback
+};
 
-const CARBON_URL = "https://66be2bb56034.ngrok-free.app/carbon";
-const LATENCY_URL = "https://130938296ab1.ngrok-free.app/latency";
-
-async function fetchCarbon(zone: string): Promise<number> {
-	try {
-		const resp = await fetch(`${CARBON_URL}?zone=${zone}`);
-		if (resp.ok) {
-			const data = await resp.json() as any;
-			return data.carbon_intensity;
-		}
-	} catch (e) {}
-	return 500; // fallback
-}
-
-async function fetchLatency(pop: string): Promise<number> {
-	try {
-		const resp = await fetch(`${LATENCY_URL}?pop=${pop}`);
-		if (resp.ok) {
-			const data = await resp.json() as any;
-			return data.latency_ms;
-		}
-	} catch (e) {}
-	return 1000; // fallback
+function popZone(pop: string): string {
+	return POP_TO_ZONE[pop] || "FALLBACK";
 }
 
 function selectPOP(
-	pops: string[],
-	carbon: Record<string, number>,
-	latency: Record<string, number>,
+	metrics: { pop: string; latency: number; carbon: number }[],
 	alpha: number,
-	beta: number,
-	maxLatency: number
-): { pop: string; reason: string } {
-	// Filter by latency SLO
-	const acceptable = pops.filter((pop) => latency[pop] <= maxLatency);
-	if (acceptable.length === 0) return { pop: "eu-west", reason: "fallback" };
-
+	beta: number
+): { pop: string; score: number } {
 	// Normalize
-	const minC = Math.min(...acceptable.map((p) => carbon[p]));
-	const maxC = Math.max(...acceptable.map((p) => carbon[p]));
-	const minL = Math.min(...acceptable.map((p) => latency[p]));
-	const maxL = Math.max(...acceptable.map((p) => latency[p]));
-	const normC = (pop: string) => (maxC > minC ? (carbon[pop] - minC) / (maxC - minC) : 0);
-	const normL = (pop: string) => (maxL > minL ? (latency[pop] - minL) / (maxL - minL) : 0);
-
-	let best = acceptable[0];
-	let bestScore = alpha * normC(best) + beta * normL(best);
-	for (const pop of acceptable) {
-		const score = alpha * normC(pop) + beta * normL(pop);
-		if (score < bestScore) {
-			best = pop;
-			bestScore = score;
-		}
-	}
-	return { pop: best, reason: "weighted" };
+	const minC = Math.min(...metrics.map(m => m.carbon));
+	const maxC = Math.max(...metrics.map(m => m.carbon));
+	const minL = Math.min(...metrics.map(m => m.latency));
+	const maxL = Math.max(...metrics.map(m => m.latency));
+	const norm = (val: number, min: number, max: number) => max > min ? (val - min) / (max - min) : 0;
+	const scored = metrics.map(m => ({
+		...m,
+		score: alpha * norm(m.carbon, minC, maxC) + beta * norm(m.latency, minL, maxL)
+	}));
+	scored.sort((a, b) => a.score - b.score);
+	return { pop: scored[0].pop, score: scored[0].score };
 }
 
+const POP_TO_ASSET: Record<string, string> = {
+	"us-east": "https://www.google.com/robots.txt",
+	"eu-west": "https://www.google.com/robots.txt",
+	"ap-southeast": "https://www.google.com/robots.txt"
+};
+
 export default {
-	async fetch(request: Request, env: Env): Promise<Response> {
-		// Read alpha/beta from KV (default to 0.9/0.1 if not set)
-		const alphaStr = await env.ECO_CONFIG.get("alpha");
-		const betaStr = await env.ECO_CONFIG.get("beta");
-		const alpha = alphaStr ? parseFloat(alphaStr) : 0.9;
-		const beta = betaStr ? parseFloat(betaStr) : 0.1;
+	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+		// Read alpha/beta from KV (default to 0.5/0.5 if not set)
+		const weights = JSON.parse(await env.ECO_CONFIG.get("weights") || '{"alpha":0.5,"beta":0.5}');
+		const alpha = weights.alpha;
+		const beta = weights.beta;
 
-		// Fetch live carbon and latency data for all POPs
-		const [carbonVals, latencyVals] = await Promise.all([
-			Promise.all(POPS.map(fetchCarbon)),
-			Promise.all(POPS.map(fetchLatency)),
-		]);
-		const carbon: Record<string, number> = Object.fromEntries(POPS.map((p, i) => [p, carbonVals[i]]));
-		const latency: Record<string, number> = Object.fromEntries(POPS.map((p, i) => [p, latencyVals[i]]));
+		// Gather metrics for each POP
+		const metrics = await Promise.all(
+			POPS.map(async pop => {
+				// Use real latency probe to Google robots.txt for all POPs
+				const latencyRec = await getLatency(pop, env, POP_TO_ASSET[pop]);
+				// Only fetch live carbon for us-east, fallback for others
+				let carbonRec;
+				if (pop === "us-east") {
+					carbonRec = await getCarbon("US-NY-NYIS", env);
+				} else {
+					carbonRec = { gco2: 500, ts: Date.now() };
+				}
+				return {
+					pop,
+					latency: latencyRec.ms,
+					carbon: carbonRec.gco2
+				};
+			})
+		);
 
-		const result = selectPOP(POPS, carbon, latency, alpha, beta, LATENCY_SLO);
+		// Compute best POP
+		const best = selectPOP(metrics, alpha, beta);
 
-		const response = {
-			selected_pop: result.pop,
-			reason: result.reason,
+		// Build response (for now, JSON; can add redirect/logging later)
+		return new Response(JSON.stringify({
+			selected_pop: best.pop,
+			metrics,
 			alpha,
 			beta,
-			carbon,
-			latency,
-			timestamp: new Date().toISOString(),
-		};
-		return new Response(JSON.stringify(response, null, 2), {
-			headers: { "content-type": "application/json" },
+			timestamp: new Date().toISOString()
+		}, null, 2), {
+			headers: { "content-type": "application/json" }
 		});
-	},
+	}
 };

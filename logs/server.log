@@ -6343,3 +6343,42 @@
 2025-07-08 06:02:10,430 - httpx - INFO - HTTP Request: GET http://localhost:8003/latency?pop=us-east "HTTP/1.1 200 OK"
 2025-07-08 06:02:10,441 - httpx - INFO - HTTP Request: GET http://localhost:8003/latency?pop=eu-west "HTTP/1.1 404 Not Found"
 2025-07-08 06:02:10,454 - httpx - INFO - HTTP Request: GET http://localhost:8003/latency?pop=ap-southeast "HTTP/1.1 404 Not Found"
+2025-07-08 12:32:39,909 - httpx - INFO - HTTP Request: GET http://localhost:8001/carbon?zone=us-east "HTTP/1.1 200 OK"
+2025-07-08 12:32:39,921 - httpx - INFO - HTTP Request: GET http://localhost:8001/carbon?zone=eu-west "HTTP/1.1 200 OK"
+2025-07-08 12:32:39,931 - httpx - INFO - HTTP Request: GET http://localhost:8001/carbon?zone=ap-southeast "HTTP/1.1 200 OK"
+2025-07-08 12:32:39,939 - api.routing - WARNING - Failed to fetch latency for us-east: All connection attempts failed
+2025-07-08 12:32:39,948 - api.routing - WARNING - Failed to fetch latency for eu-west: All connection attempts failed
+2025-07-08 12:32:39,956 - api.routing - WARNING - Failed to fetch latency for ap-southeast: All connection attempts failed
+2025-07-08 12:32:39,957 - api.routing - WARNING - No POPs meet latency SLO, defaulting to eu-west
+2025-07-08 13:40:19,324 - httpx - INFO - HTTP Request: GET http://localhost:8001/carbon?zone=us-east "HTTP/1.1 200 OK"
+2025-07-08 13:40:19,354 - httpx - INFO - HTTP Request: GET http://localhost:8001/carbon?zone=eu-west "HTTP/1.1 200 OK"
+2025-07-08 13:40:19,366 - httpx - INFO - HTTP Request: GET http://localhost:8001/carbon?zone=ap-southeast "HTTP/1.1 200 OK"
+2025-07-08 13:40:19,375 - api.routing - WARNING - Failed to fetch latency for us-east: All connection attempts failed
+2025-07-08 13:40:19,384 - api.routing - WARNING - Failed to fetch latency for eu-west: All connection attempts failed
+2025-07-08 13:40:19,394 - api.routing - WARNING - Failed to fetch latency for ap-southeast: All connection attempts failed
+2025-07-08 13:40:19,395 - api.routing - WARNING - No POPs meet latency SLO, defaulting to eu-west
+2025-07-08 13:43:25,249 - httpx - INFO - HTTP Request: GET http://localhost:8001/carbon?zone=us-east "HTTP/1.1 200 OK"
+2025-07-08 13:43:25,250 - api.routing - WARNING - Failed to fetch carbon for us-east: object dict can't be used in 'await' expression
+2025-07-08 13:43:25,262 - httpx - INFO - HTTP Request: GET http://localhost:8001/carbon?zone=eu-west "HTTP/1.1 200 OK"
+2025-07-08 13:43:25,263 - api.routing - WARNING - Failed to fetch carbon for eu-west: object dict can't be used in 'await' expression
+2025-07-08 13:43:25,272 - httpx - INFO - HTTP Request: GET http://localhost:8001/carbon?zone=ap-southeast "HTTP/1.1 200 OK"
+2025-07-08 13:43:25,272 - api.routing - WARNING - Failed to fetch carbon for ap-southeast: object dict can't be used in 'await' expression
+2025-07-08 13:43:25,284 - httpx - INFO - HTTP Request: GET http://localhost:8002/latency?pop=us-east "HTTP/1.1 200 OK"
+2025-07-08 13:43:25,285 - api.routing - WARNING - Failed to fetch latency for us-east: object dict can't be used in 'await' expression
+2025-07-08 13:43:25,294 - httpx - INFO - HTTP Request: GET http://localhost:8002/latency?pop=eu-west "HTTP/1.1 200 OK"
+2025-07-08 13:43:25,294 - api.routing - WARNING - Failed to fetch latency for eu-west: object dict can't be used in 'await' expression
+2025-07-08 13:43:25,304 - httpx - INFO - HTTP Request: GET http://localhost:8002/latency?pop=ap-southeast "HTTP/1.1 200 OK"
+2025-07-08 13:43:25,304 - api.routing - WARNING - Failed to fetch latency for ap-southeast: object dict can't be used in 'await' expression
+2025-07-08 13:43:25,304 - api.routing - WARNING - No POPs meet latency SLO, defaulting to eu-west
+2025-07-08 13:45:37,191 - httpx - INFO - HTTP Request: GET http://localhost:8001/carbon?zone=us-east "HTTP/1.1 200 OK"
+2025-07-08 13:45:37,212 - httpx - INFO - HTTP Request: GET http://localhost:8001/carbon?zone=eu-west "HTTP/1.1 200 OK"
+2025-07-08 13:45:37,225 - httpx - INFO - HTTP Request: GET http://localhost:8001/carbon?zone=ap-southeast "HTTP/1.1 200 OK"
+2025-07-08 13:45:37,238 - httpx - INFO - HTTP Request: GET http://localhost:8002/latency?pop=us-east "HTTP/1.1 200 OK"
+2025-07-08 13:45:37,247 - httpx - INFO - HTTP Request: GET http://localhost:8002/latency?pop=eu-west "HTTP/1.1 200 OK"
+2025-07-08 13:45:37,256 - httpx - INFO - HTTP Request: GET http://localhost:8002/latency?pop=ap-southeast "HTTP/1.1 200 OK"
+2025-07-08 14:02:17,260 - httpx - INFO - HTTP Request: GET http://localhost:8001/carbon?zone=us-east "HTTP/1.1 200 OK"
+2025-07-08 14:02:17,274 - httpx - INFO - HTTP Request: GET http://localhost:8001/carbon?zone=eu-west "HTTP/1.1 200 OK"
+2025-07-08 14:02:17,290 - httpx - INFO - HTTP Request: GET http://localhost:8001/carbon?zone=ap-southeast "HTTP/1.1 200 OK"
+2025-07-08 14:02:17,305 - httpx - INFO - HTTP Request: GET http://localhost:8002/latency?pop=us-east "HTTP/1.1 200 OK"
+2025-07-08 14:02:17,315 - httpx - INFO - HTTP Request: GET http://localhost:8002/latency?pop=eu-west "HTTP/1.1 200 OK"
+2025-07-08 14:02:17,325 - httpx - INFO - HTTP Request: GET http://localhost:8002/latency?pop=ap-southeast "HTTP/1.1 200 OK"

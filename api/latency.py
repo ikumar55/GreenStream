@@ -12,8 +12,9 @@ logger = logging.getLogger(__name__)
 
 # List of POPs to probe
 POPS = {
-    'us-east': 'https://www.google.com'
-    # Add more POPs and their ping endpoints here
+    'us-east': 'https://www.google.com',
+    'eu-west': 'https://www.bbc.co.uk',
+    'ap-southeast': 'https://www.singtel.com'
 }
 
 REDIS_KEY_PREFIX = "latency:"

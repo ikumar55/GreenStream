@@ -1,0 +1,232 @@
+---
+alwaysApply: false
+---
+
+
+
+In-Depth Step-by-Step Guide: GreenStream Project
+
+Goal: Build a production-ready ML system that routes internet traffic to minimize carbon emissions while keeping latency <30 ms.
+
+Phase 1: Core Infrastructure (Weeks 1-3)
+Objective: Establish a working routing system with real-time carbon/latency data.
+
+Step 1: Map POPs to Carbon Grids
+
+Why: You need to know which data centers (POPs) belong to which carbon grids (e.g., California = CAISO_NORTH).
+
+How:
+
+Create a JSON mapping (e.g., {"sfo": "CAISO_NORTH", "lon": "UK_GRID"}).
+
+Store in Cloudflare KV.
+
+Validation: GET /map returns POP-grid pairs.
+
+Step 2: Build Latency Monitor
+
+Why: Latency changes constantly; you need live data to make routing decisions.
+
+How:
+
+Cron Worker pings all POPs every 60 sec from multiple locations.
+
+Store latency (ms) per POP in KV.
+
+Validation: KV shows updated latency values every minute.
+
+Step 3: Carbon Data Pipeline
+
+Why: Carbon intensity varies by grid; you need live readings.
+
+How:
+
+For each grid (CAISO, UK, etc.), build an adapter to fetch data:
+
+WattTime (marginal) for CAISO.
+
+National Grid ESO (average) for UK.
+
+Fallback: Electricity Maps (stale).
+
+Cron Worker runs every 5 min → stores {gco2, ts, source, fresh_sec} in KV.
+
+Validation: KV logs show carbon readings updating across grids.
+
+Step 4: Basic Routing Logic
+
+Why: Route traffic using score = α·latency + β·carbon.
+
+How:
+
+Worker script (on user request):
+
+Fetches latency + carbon from KV.
+
+Applies penalties for stale data (if fresh_sec > 3600: gco2 += 50).
+
+Calculates score for each POP.
+
+Routes to POP with lowest score.
+
+Fallback: If carbon data fails → use latency-only.
+
+Validation: 95% of requests route successfully; logs show decision metrics.
+
+Step 5: Decision Logging
+
+Why: Essential for tuning α/β later.
+
+How:
+
+Log every request: [decision_id, POP_chosen, carbon_used, latency_used, all_scores].
+
+Push to Elasticsearch via Vector.
+
+Validation: Elasticsearch shows real-time logs; no data loss.
+
+Phase 2: ML Integration (Weeks 4-6)
+Objective: Add intelligence to anticipate carbon spikes and optimize routing.
+
+Step 6: Bayesian Optimization Setup
+
+Why: Automatically tune α/β to balance carbon vs. latency.
+
+How:
+
+Cron Worker (every 15 min):
+
+Fetches last hour of logs.
+
+Computes objective: max(carbon_saved) s.t. latency < 30ms.
+
+Runs Bayesian optimization (e.g., scikit-optimize) → updates α/β in KV.
+
+Start values: α=1.0, β=0.5.
+
+Validation: KV shows α/β updating; carbon savings improve weekly.
+
+Step 7: Carbon Forecasting (LSTM)
+
+Why: Predict carbon ramps to shift traffic preemptively.
+
+How:
+
+Data Collection:
+
+Extend carbon Cron Worker to store historical data in R2 (Cloudflare storage).
+
+Training (Offline):
+
+Train LSTM on 14 days of carbon data (5-min intervals).
+
+Input: 6h history → Output: 60-min forecast.
+
+Validate using MAE vs. persistence baseline.
+
+Deployment:
+
+Convert model to ONNX → deploy via Workers AI.
+
+Cron Worker runs every 5 min → stores forecasts in KV.
+
+Validation:
+
+Grafana dashboard shows forecast vs. actuals.
+
+MAE < 15 gCO₂/kWh.
+
+Step 8: Enhanced Routing
+
+Why: React to future carbon spikes.
+
+How:
+
+Update scoring:
+
+python
+score = α·latency + β·carbon_now + γ·carbon_forecast_15min  
+Start with γ=0.2 → tune via Bayesian optimizer.
+
+Validation: Traffic shifts before carbon spikes (check logs during solar ramp-down).
+
+Phase 3: Pilot & Impact (Weeks 7-9)
+Objective: Deploy to real traffic and measure results.
+
+Step 9: Pilot Deployment
+
+Why: Prove real-world impact.
+
+How:
+
+Route 100% of your test domain (e.g., green.yourdomain.com) through GreenStream.
+
+Run for 48 hours → collect metrics.
+
+Validation: Zero downtime; logs show traffic routing.
+
+Step 10: A/B Testing
+
+Why: Quantify carbon savings vs. baseline (e.g., latency-only routing).
+
+How:
+
+Split traffic: 50% to GreenStream, 50% to baseline.
+
+Compare:
+
+Carbon intensity (gCO₂/GB).
+
+Latency (p95).
+
+Validation: GreenStream reduces carbon by >5% with latency <30 ms.
+
+Step 11: Dashboard & Metrics
+
+Why: Show tangible results for your resume.
+
+How:
+
+Grafana dashboard:
+
+Real-time carbon savings vs. baseline.
+
+Latency distribution.
+
+Forecast accuracy.
+
+Key metric: "X grams CO₂ saved per GB."
+
+Validation: Dashboard updates every 2 min.
+
+Step 12: Case Study
+
+Why: Communicate value to employers.
+
+How: Document:
+
+*"GreenStream cut emissions by 8.3% for 1.2M requests, adding 18 ms p95 latency. Bayesian tuning + LSTM forecasting drove $Y savings."*
+
+Validation: Share in your resume/GitHub README.
+
+Critical Checks Every Week
+Cost: Cloudflare costs <$5/month.
+
+Latency: p99 < 30 ms (use k6 load tests).
+
+Data Freshness: Carbon readings never >1 hour stale.
+
+Logging: 100% of decisions logged.
+
+When to Move to Next Step
+Proceed only if:
+
+Current step meets validation criteria.
+
+Core metrics (latency, errors) are stable.
+
+Dashboard shows expected behavior.
+
+No shortcuts on logging and validation.
+These make your project resume-worthy.
+
